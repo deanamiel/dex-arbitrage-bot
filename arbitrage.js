@@ -81,7 +81,7 @@ const init = async () => {
 
       // console.log(SushiPair);
 
-      let ethFromKyber = {};
+      let amountFromKyber = {};
 
       function getTradingPair(id, qty) {
         return new Promise((resolve, reject) => {
@@ -89,7 +89,7 @@ const init = async () => {
           request({url: url, json: true}, (error, response) => {
             if (response) {
               //console.log("Second - inside second promise");
-              ethFromKyber = response.body.data[0].src_qty[0];
+              amountFromKyber = response.body.data[0].src_qty[0];
               resolve();
             } else {
               reject(error);
@@ -101,15 +101,19 @@ const init = async () => {
  
       const url = 'https://api.kyber.network/currencies'
 
-      function getEthDai(url) {
+      function getEthDai(url,amount,dai) {
         return new Promise((resolve, reject) => {
           request({url: url, json: true}, async (error, response) => {
             if (response) {
               //console.log("First - inside first promise");
-              const idEth = response.body.data[0].id;
-              const idDai = response.body.data[3].id;
+              var id = {};
+              if (dai) {
+                id = response.body.data[3].id;
+              } else {
+                id = response.body.data[0].id;
+              }
               //console.log("First");
-              const val = await getTradingPair(idDai, INPUT_AMOUNT_DAI);
+              const val = await getTradingPair(id, amount);
               resolve();
             } else {
               reject(error);
@@ -119,7 +123,8 @@ const init = async () => {
         })
       }
  
-      await getEthDai(url);
+      await getEthDai(url, INPUT_AMOUNT_DAI, true);
+      const ethFromKyber = amountFromKyber;
 
       const [daiUni, ethUni] = await Promise.all(
         [
@@ -138,7 +143,7 @@ const init = async () => {
         daiUni
       );
 
-      console.log(UniPair);
+      // console.log(UniPair);
 
       // const DAI_TO_ETH_SUSHI = new RouteSushi([SushiPair], daiSushi);
       // const tradeSushi = new TradeSushi(
@@ -154,12 +159,16 @@ const init = async () => {
       const DAI_TO_ETH_Uni = new RouteUni([UniPair], daiUni);
       const tradeUni = new TradeUni(
         DAI_TO_ETH_Uni,
-        new TokenAmountUni(daiUni, BigInt(11)),
+        new TokenAmountUni(daiUni, "1000000000000000"),
         TradeTypeUni.EXACT_INPUT
       );
 
-      // const ethFromUni =
-      //   tradeUni.executionPrice.toSignificant(6) * INPUT_AMOUNT_DAI;
+      const ethFromUni =
+        tradeUni.executionPrice.toSignificant(6) * INPUT_AMOUNT_DAI;
+
+      const daiFromKyber = ethFromUni * (1000.0/ethFromKyber);
+
+      // console.log(daiFromKyber);
 
       // // const SushiPairInverted = await FetcherSushi.fetchPairData(
       // //   daiSushi,
@@ -197,7 +206,7 @@ const init = async () => {
       const daiFromUni =
         tradeUniInverted.executionPrice.toSignificant(6) * ethFromKyber;
 
-      // console.log(`Swap Uniswap --> Sushiswap 1000 / ${daiFromSushi}`);
+      console.log(`Swap Uniswap --> Kyber 1000 / ${daiFromKyber}`);
       console.log(`Swap Kyber --> Uniswap 1000 / ${daiFromUni}`);
 
       // if (daiFromSushi > INPUT_AMOUNT_DAI) {
