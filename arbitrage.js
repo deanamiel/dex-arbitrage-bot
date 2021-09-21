@@ -5,28 +5,6 @@ const ethers = require("ethers")
 const provider = ethers.getDefaultProvider();
 const request = require("request");
 
-// var {
-//   ChainId,
-//   Token,
-//   Pair,
-//   Route,
-//   Trade,
-//   TradeType,
-//   SUSHISWAP_TWAP_1_ORACLE_ADDRESS,
-// } = require("@sushiswap/sdk");
-// const ChainIdSushi = ChainId;
-// const TokenSushi = Token;
-// const TokenAmountSushi = TokenAmount;
-// const PairSushi = Pair;
-// const FetcherSushi = Fetcher;
-// const RouteSushi = Route;
-// const TradeSushi = Trade;
-// const TradeTypeSushi = TradeType;
-
-// var {
-//   Pool
-// } = require("@uniswap/v3-sdk");
-
 var {
   ChainId,
   Token,
@@ -52,6 +30,13 @@ const web3 = new Web3(
   new Web3.providers.WebsocketProvider(process.env.INFURA_URL)
 );
 
+//const { address: admin } = web3.eth.accounts.wallet.add(process.env.PRIVATE_KEY);
+
+// const kyber = new web3.eth.Contract(
+//   abis.kyber.kyberNetworkProxy,
+//   addresses.kyber.kyberNetworkProxy
+// );
+
 const ONE_WEI = web3.utils.toBN(web3.utils.toWei("1"));
 const AMOUNT_DAI_WEI = web3.utils.toBN(web3.utils.toWei("1000"));
 const INPUT_AMOUNT_DAI = 1000.0;
@@ -61,25 +46,6 @@ const init = async () => {
     .subscribe("newBlockHeaders")
     .on("data", async (block) => {
       console.log(`New block recieved. Block number: ${block.number}`);
-
-      // const [daiSushi, ethSushi] = await Promise.all(
-      //   [
-      //     addresses.tokens["dai"],
-      //     addresses.tokens["eth"],
-      //   ].map((tokenAddress) =>
-      //     new TokenSushi(
-      //       ChainIdSushi.MAINNET,
-      //       tokenAddress,
-      //       10
-      //     )
-      //   )
-      // );
-
-      // console.log(daiSushi);
-
-      // const SushiPair = await PairSushi.getAddress(daiSushi, ethSushi);
-
-      // console.log(SushiPair);
 
       let amountFromKyber = {};
 
@@ -143,19 +109,6 @@ const init = async () => {
         daiUni
       );
 
-      // console.log(UniPair);
-
-      // const DAI_TO_ETH_SUSHI = new RouteSushi([SushiPair], daiSushi);
-      // const tradeSushi = new TradeSushi(
-      //   DAI_TO_ETH_SUSHI,
-      //   new TokenAmountSushi(daiSushi, BigInt(11)),
-      //   TradeTypeSushi.EXACT_INPUT
-      // );
-
-      // // const ethFromSushi =
-      // //   tradeSushi.executionPrice.toSignificant(6) * INPUT_AMOUNT_DAI;
-
-
       const DAI_TO_ETH_Uni = new RouteUni([UniPair], daiUni);
       const tradeUni = new TradeUni(
         DAI_TO_ETH_Uni,
@@ -167,26 +120,6 @@ const init = async () => {
         tradeUni.executionPrice.toSignificant(6) * INPUT_AMOUNT_DAI;
 
       const daiFromKyber = ethFromUni * (1000.0/ethFromKyber);
-
-      // console.log(daiFromKyber);
-
-      // // const SushiPairInverted = await FetcherSushi.fetchPairData(
-      // //   daiSushi,
-      // //   ethSushi
-      // // );
-
-      // // const ETH_TO_DAI_SUSHI = new RouteSushi(
-      // //   [SushiPairInverted],
-      // //   ethSushi
-      // // );
-      // // const tradeSushiInverted = new TradeSushi(
-      // //   ETH_TO_DAI_SUSHI,
-      // //   new TokenAmountSushi(ethSushi, BigInt(1e18)),
-      // //   TradeTypeSushi.EXACT_INPUT
-      // // );
-
-      // // const DAIFromSushi =
-      // //   tradeSushiInverted.executionPrice.toSignificant(6) * ethFromUni;
 
       const UniPairInverted = await FetcherUni.fetchPairData(
         daiUni,
@@ -209,36 +142,61 @@ const init = async () => {
       console.log(`Swap Uniswap --> Kyber 1000 / ${daiFromKyber}`);
       console.log(`Swap Kyber --> Uniswap 1000 / ${daiFromUni}`);
 
-      // if (daiFromSushi > INPUT_AMOUNT_DAI) {
-      //   const profit = daiFromSushi - INPUT_AMOUNT_DAI;
-      //   console.log(`${profit} -> Buy Uniswap, sell Sushiswap`);
-      //   fs.writeFile(
-      //     "./profitPolygon.txt",
-      //     `${profit} -> Buy Uniswap, sell Sushiswap,\n`,
-      //     { flag: "a" },
-      //     (err) => {
-      //       if (err) {
-      //         console.error(err);
-      //         return;
-      //       }
-      //       //file written successfully
-      //     }
+      // if (daiFromKyber > INPUT_AMOUNT_DAI) {
+      //   const tx = flashloan.methods.initiateFlashloan(
+      //     addresses.dydx.solo, 
+      //     addresses.tokens.dai, 
+      //     AMOUNT_DAI_WEI,
+      //     DIRECTION.UNISWAP_TO_KYBER
       //   );
+      //   const [gasPrice, gasCost] = await Promise.all([
+      //     web3.eth.getGasPrice(),
+      //     tx.estimateGas({from: admin}),
+      //   ]);
+      //   const txCost = web3.utils.toBN(gasCost).mul(web3.utils.toBN(gasPrice)).mul(ethPrice);
+      //   const profit = daiFromKyber.sub(daiFromKyber).sub(txCost);
+
+      //   if(profit > 0) {
+      //     console.log(`${profit} -> Buy Uniswap, sell Kyber`);
+      //     const data = tx.encodeABI();
+      //     const txData = {
+      //       from: admin,
+      //       to: flashloan.options.address,
+      //       data,
+      //       gas: gasCost,
+      //       gasPrice
+      //     };
+      //     const receipt = await web3.eth.sendTransaction(txData);
+      //     console.log(`Transaction hash: ${receipt.transactionHash}`);
+      //   }
       // } else if (daiFromUni > INPUT_AMOUNT_DAI) {
-      //   const profit = daiFromUni - INPUT_AMOUNT_DAI;
-      //   console.log(`${profit} -> Buy Sushiswap, sell Uniswap`);
-      //   fs.writeFile(
-      //     "./profitPolygon.txt",
-      //     `${profit} -> Buy Sushiswap, sell Uniswap,\n`,
-      //     { flag: "a" },
-      //     (err) => {
-      //       if (err) {
-      //         console.error(err);
-      //         return;
-      //       }
-      //       //file written successfully
+      //     const tx = flashloan.methods.initiateFlashloan(
+      //       addresses.dydx.solo, 
+      //       addresses.tokens.dai, 
+      //       AMOUNT_DAI_WEI,
+      //       DIRECTION.KYBER_TO_UNISWAP
+      //     );
+      //     const [gasPrice, gasCost] = await Promise.all([
+      //       web3.eth.getGasPrice(),
+      //       tx.estimateGas({from: admin}),
+      //     ]);
+
+      //     const txCost = web3.utils.toBN(gasCost).mul(web3.utils.toBN(gasPrice)).mul(ethPrice);
+      //     const profit = daiFromUniswap.sub(daiFromUni).sub(txCost);
+
+      //     if (profit > 0) {
+      //       console.log(`${profit} -> Buy Kyber, sell Uniswap`);
+      //       const data = tx.encodeABI();
+      //       const txData = {
+      //         from: admin,
+      //         to: flashloan.options.address,
+      //         data,
+      //         gas: gasCost,
+      //         gasPrice
+      //       };
+      //       const receipt = await web3.eth.sendTransaction(txData);
+      //       console.log(`Transaction hash: ${receipt.transactionHash}`);
       //     }
-      //   );
       // }
     })
     .on("error", (error) => {
